@@ -1,0 +1,28 @@
+name: Task
+description: One step of a feature. One branch, one pull request.
+body:
+  - type: markdown
+    attributes:
+      value: Set the milestone of the parent feature on this issue. Milestones do not pass down to sub-issues.
+  - type: input
+    id: parent
+    attributes:
+      label: Parent feature
+      description: The number of the feature this task belongs to.
+      placeholder: "#42"
+    validations:
+      required: true
+  - type: textarea
+    id: done-when
+    attributes:
+      label: Done when
+      description: What you can see or run to know it works.
+    validations:
+      required: true
+  - type: textarea
+    id: plan
+    attributes:
+      label: Plan
+      description: Optional. The steps, in order, as a checklist. Update it while you work.
+      placeholder: |
+        - [ ] 

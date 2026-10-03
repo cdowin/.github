@@ -1,0 +1,27 @@
+name: Bug
+description: Something does not work as it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Or "Not reproduced yet".
+      placeholder: |
+        1.
+        2.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: Add the build or commit and the device if you know them.
+    validations:
+      required: true

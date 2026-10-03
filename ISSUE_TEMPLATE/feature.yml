@@ -1,0 +1,20 @@
+name: Feature
+description: One outcome a player or reader can see. It sits in a milestone and holds tasks.
+body:
+  - type: markdown
+    attributes:
+      value: Set the milestone on the issue. Add the tasks as sub-issues.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: The change, in plain words. One outcome only.
+    validations:
+      required: true
+  - type: textarea
+    id: done-when
+    attributes:
+      label: Done when
+      description: What you can see or run to know it works.
+    validations:
+      required: true
