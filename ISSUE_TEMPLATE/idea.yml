@@ -1,6 +1,6 @@
 name: Idea
 description: A thought that is not work yet. It waits in the backlog.
-labels: []
+labels: [idea]
 body:
   - type: textarea
     id: idea
