@@ -14,7 +14,7 @@ inputs:
     default: ''
   needs-json:
     description: >
-      `${{ toJSON(needs) }}` from a report job. Each needed job id becomes a check: success is pass,
+      The JSON of the needs context (toJSON of needs) from a report job. Each needed job id becomes a check: success is pass,
       cancelled (timeout or cancel) is fail with the reason "timed out or cancelled", any other
       non-skipped result is fail, skipped is ignored. A check also named in `results` keeps the `results` status.
     default: ''
