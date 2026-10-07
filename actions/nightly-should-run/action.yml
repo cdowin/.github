@@ -1,0 +1,44 @@
+name: Nightly should run
+description: >
+  Decide whether a scheduled nightly has anything to test. Outputs run=false when no
+  file that matters changed since the last completed run of this workflow on main (green or red;
+  cancelled and skipped runs tested nothing and are passed over). workflow_dispatch always gives run=true.
+  An error gives run=true (fail open). The caller checks out with enough depth for HEAD (the default
+  depth 1 is enough); this action fetches the old commit itself with `git fetch --depth=1 origin <sha>`.
+  The calling job must grant `actions: read` and `contents: read`. Needs gh and git; no jq.
+  Gate the nightly's jobs on `needs.<job>.outputs.run == 'true'`, or on `steps.<id>.outputs.run`.
+inputs:
+  paths:
+    description: >
+      Pathspecs the suites depend on, newline or space separated. Default: everything except
+      Markdown and .claude/.
+    default: |
+      .
+      :(exclude)*.md
+      :(exclude).claude/
+  workflow:
+    description: Workflow file name to compare against, for example nightly.yml. Default is the calling workflow.
+    default: ''
+  token:
+    description: Token that can read Actions runs in this repo.
+    default: ${{ github.token }}
+outputs:
+  run:
+    description: "true or false."
+    value: ${{ steps.decide.outputs.run }}
+  reason:
+    description: One line saying why.
+    value: ${{ steps.decide.outputs.reason }}
+runs:
+  using: composite
+  steps:
+    - id: decide
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        NSR_PATHS: ${{ inputs.paths }}
+        NSR_WORKFLOW: ${{ inputs.workflow }}
+        NSR_WORKFLOW_REF: ${{ github.workflow_ref }}
+        NSR_EVENT: ${{ github.event_name }}
+        NSR_REPO: ${{ github.repository }}
+      run: bash "${{ github.action_path }}/should-run.sh"

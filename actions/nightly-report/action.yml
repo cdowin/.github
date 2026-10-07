@@ -1,0 +1,42 @@
+name: Nightly report
+description: >
+  Turn nightly check results into issues. A failing check opens or updates one open issue
+  titled "Nightly: <check>" (label nightly). A passing check closes its open issue. Uploads the logs.
+  The calling job must grant `issues: write` and `contents: read`. Add `actions: read` only if the
+  job also reads run data. Works on hosted and self-hosted runners (needs gh, and jq for JSON input).
+inputs:
+  results:
+    description: >
+      The checks, one per line as `check|status|log-path` (status is pass or fail; log-path may be empty),
+      or a JSON array of {"check":"..","status":"pass|fail","log":".."}.
+    required: true
+  labels:
+    description: Extra labels for a new issue, comma separated. `nightly` is always added.
+    default: bug,agent:claude
+  artifact-name:
+    description: Name of the uploaded log artifact. Empty skips the upload.
+    default: nightly-logs
+  token:
+    description: Token that can write issues in this repo.
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - id: report
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        NR_RESULTS: ${{ inputs.results }}
+        NR_LABELS: ${{ inputs.labels }}
+        NR_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        NR_SHA: ${{ github.sha }}
+        NR_REPO: ${{ github.repository }}
+      run: bash "${{ github.action_path }}/nightly-report.sh"
+    - uses: actions/upload-artifact@v4
+      if: always() && inputs.artifact-name != '' && steps.report.outputs.logs != ''
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.report.outputs.logs }}
+        include-hidden-files: true
+        if-no-files-found: ignore
+        retention-days: 7

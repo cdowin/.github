@@ -1,0 +1,14 @@
+name: self-test
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  self-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash actions/nightly-should-run/should-run.sh --self-test
+      - run: bash actions/nightly-report/nightly-report.sh --self-test
