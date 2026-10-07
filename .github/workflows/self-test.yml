@@ -12,3 +12,8 @@ jobs:
       - uses: actions/checkout@v7
       - run: bash actions/nightly-should-run/should-run.sh --self-test
       - run: bash actions/nightly-report/nightly-report.sh --self-test
+      # An expression in a description is evaluated by the runner and breaks every caller.
+      - name: no expression in action descriptions
+        run: |
+          if grep -nE '^ +description:.*\$\{\{|^ +\$\{\{' actions/*/action.yml; then exit 1; fi
+          if awk '/description: >/{d=1;next} /^    (default|required):|^  [a-z-]+:/{d=0} d&&/\$\{\{/{print FILENAME": "$0; f=1} END{exit f}' actions/*/action.yml; then :; else exit 1; fi
