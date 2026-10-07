@@ -2,6 +2,8 @@ name: Nightly report
 description: >
   Turn nightly check results into issues. A failing check opens or updates one open issue
   titled "Nightly: <check>" (label nightly). A passing check closes its open issue. Uploads the logs.
+  Run it in its own job (`needs:` the suite jobs, `if: always()`) and pass `needs-json` so a timed-out
+  or cancelled job still files an issue. Pass `items-file` for one issue per failing item.
   The calling job must grant `issues: write` and `contents: read`. Add `actions: read` only if the
   job also reads run data. Works on hosted and self-hosted runners (needs gh, and jq for JSON input).
 inputs:
@@ -9,7 +11,26 @@ inputs:
     description: >
       The checks, one per line as `check|status|log-path` (status is pass or fail; log-path may be empty),
       or a JSON array of {"check":"..","status":"pass|fail","log":".."}.
-    required: true
+    default: ''
+  needs-json:
+    description: >
+      `${{ toJSON(needs) }}` from a report job. Each needed job id becomes a check: success is pass,
+      cancelled (timeout or cancel) is fail with the reason "timed out or cancelled", any other
+      non-skipped result is fail, skipped is ignored. A check also named in `results` keeps the `results` status.
+    default: ''
+  logs-dir:
+    description: Optional folder of downloaded logs. A file `<job-id>.log` there is attached to that job's check.
+    default: ''
+  items-file:
+    description: >
+      Optional file of `check/item|status|log` lines (for example `integration/<scenario>|fail|path`).
+      Each failing item gets its own issue "Nightly: <check>: <item>", up to `max-issues` new ones per run;
+      the rest are listed in one issue "Nightly: <check>: other failures". A passing item closes its open issue.
+      A check with failing items files no check-level issue of its own.
+    default: ''
+  max-issues:
+    description: Cap on new per-item issues in one run.
+    default: '10'
   labels:
     description: Extra labels for a new issue, comma separated. `nightly` is always added.
     default: bug,agent:claude
@@ -27,6 +48,10 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.token }}
         NR_RESULTS: ${{ inputs.results }}
+        NR_NEEDS: ${{ inputs.needs-json }}
+        NR_LOGS_DIR: ${{ inputs.logs-dir }}
+        NR_ITEMS_FILE: ${{ inputs.items-file }}
+        NR_MAX_ISSUES: ${{ inputs.max-issues }}
         NR_LABELS: ${{ inputs.labels }}
         NR_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         NR_SHA: ${{ github.sha }}
