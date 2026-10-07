@@ -47,6 +47,9 @@ FAKE
   has "Nightly: site" && fail "skipped job was reported"
   has "issue close 7" || fail "needs success did not close"
   grep -q "build.log" "$t/out" || fail "logs-dir log not picked up"
+  NR_RESULTS="" NR_NEEDS="$needs" NR_NEEDS_IGNORE="build,unit" NR_ITEMS_FILE="" NR_LOGS_DIR="" run env
+  has "Nightly: build" && fail "ignored job was reported"
+  has "Nightly: unit" && fail "ignored job was reported"
 
   # 3. items: failing items filed up to the cap, rest in one summary, passing closes.
   { echo 'integration/s-fixed|pass|'
@@ -108,6 +111,7 @@ fi
 if [ -n "$needs" ]; then
   printf '%s' "$needs" | jq -r 'to_entries[] | "\(.key)|\(.value.result)"' | while IFS='|' read -r job res; do
     [ -n "$job" ] || continue
+    case ",${NR_NEEDS_IGNORE:-}," in *",$job,"*) continue ;; esac
     if awk -F'|' -v j="$job" '$1==j{f=1} END{exit !f}' "$rows"; then continue; fi
     log=""
     if [ -n "$logs_dir" ] && [ -f "$logs_dir/$job.log" ]; then log="$logs_dir/$job.log"; fi

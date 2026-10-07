@@ -18,6 +18,9 @@ inputs:
       cancelled (timeout or cancel) is fail with the reason "timed out or cancelled", any other
       non-skipped result is fail, skipped is ignored. A check also named in `results` keeps the `results` status.
     default: ''
+  needs-ignore:
+    description: Comma separated job ids in `needs-json` to skip, for example the job that decides whether to run, or a suite job whose own checks are already in `results`.
+    default: ''
   logs-dir:
     description: Optional folder of downloaded logs. A file `<job-id>.log` there is attached to that job's check.
     default: ''
@@ -49,6 +52,7 @@ runs:
         GH_TOKEN: ${{ inputs.token }}
         NR_RESULTS: ${{ inputs.results }}
         NR_NEEDS: ${{ inputs.needs-json }}
+        NR_NEEDS_IGNORE: ${{ inputs.needs-ignore }}
         NR_LOGS_DIR: ${{ inputs.logs-dir }}
         NR_ITEMS_FILE: ${{ inputs.items-file }}
         NR_MAX_ISSUES: ${{ inputs.max-issues }}
