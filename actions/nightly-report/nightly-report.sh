@@ -22,7 +22,7 @@ FAKE
   chmod +x "$t/bin/gh"
   printf 'l1\nl2\nboom\n' > "$t/red.log"
   printf 'tail of build\n' > "$t/logs/build.log"
-  export PATH="$t/bin:$PATH" NR_CALLS="$t/calls" GH_TOKEN=x NR_LABELS="bug,agent:claude" \
+  export PATH="$t/bin:$PATH" NR_CALLS="$t/calls" GH_TOKEN=x NR_LABELS="bug" \
     NR_RUN_URL=http://run NR_SHA=abc123 NR_REPO=o/r GITHUB_OUTPUT="$t/out" NR_MAX_ISSUES=10
   fail() { echo "nightly-report self-test: $1"; echo "$calls"; exit 1; }
   has() { grep -F -q -- "$1" <<<"$calls"; }
@@ -84,6 +84,7 @@ needs="${NR_NEEDS:-}"
 items_file="${NR_ITEMS_FILE:-}"
 max_issues="${NR_MAX_ISSUES:-10}"
 logs_dir="${NR_LOGS_DIR:-}"
+# No agent label: any agent can take a nightly issue. Default is bug (with nightly).
 labels="${NR_LABELS:-}"
 sha="${NR_SHA:-unknown}"
 short=$(printf '%s' "$sha" | cut -c1-8)
