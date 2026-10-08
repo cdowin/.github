@@ -84,7 +84,7 @@ needs="${NR_NEEDS:-}"
 items_file="${NR_ITEMS_FILE:-}"
 max_issues="${NR_MAX_ISSUES:-10}"
 logs_dir="${NR_LOGS_DIR:-}"
-# No agent label: any agent can take a nightly issue. Default is bug (with nightly).
+# No agent label: any agent can take a nightly issue. action.yml defaults NR_LABELS to bug; nightly is always added.
 labels="${NR_LABELS:-}"
 sha="${NR_SHA:-unknown}"
 short=$(printf '%s' "$sha" | cut -c1-8)
