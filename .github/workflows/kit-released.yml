@@ -61,6 +61,18 @@ jobs:
 
           ### Proof
           The narrow gate output, linked in the PR."
+          file_issue() {
+            open=$(gh issue list -R "$1" --state open --limit 100 --json number,title \
+              --jq "[.[] | select(.title | startswith(\"Adopt $KIT \"))][0].number // empty") || return 1
+            if [ -n "$open" ]; then
+              gh issue edit "$open" -R "$1" --title "$title" --body "$body" || return 1
+              echo "edited $1#$open"
+            else
+              gh issue create -R "$1" --title "$title" --body "$body" \
+                --label status:ready --label area:code || return 1
+            fi
+          }
+          failed=0
           for repo in $(printf '%s' "$CONSUMERS" | tr ',' ' '); do
             if [ "$DRY_RUN" = "true" ]; then
               echo "DRY RUN: would file in $repo"
@@ -70,13 +82,9 @@ jobs:
               printf '%s\n' "$body" | sed 's/^/  | /'
               continue
             fi
-            open=$(gh issue list -R "$repo" --state open --limit 100 --json number,title \
-              --jq "[.[] | select(.title | startswith(\"Adopt $KIT \"))][0].number // empty")
-            if [ -n "$open" ]; then
-              gh issue edit "$open" -R "$repo" --title "$title" --body "$body"
-              echo "edited $repo#$open"
-            else
-              gh issue create -R "$repo" --title "$title" --body "$body" \
-                --label status:ready --label area:code
+            if ! file_issue "$repo"; then
+              echo "::error::could not file the Adopt issue in $repo"
+              failed=1
             fi
           done
+          exit "$failed"
