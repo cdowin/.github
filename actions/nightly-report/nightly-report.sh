@@ -14,6 +14,7 @@ if [ "${1:-}" = "--self-test" ]; then
 echo "gh $*" >> "$NR_CALLS"
 prev=""
 for a in "$@"; do [ "$prev" = "--body-file" ] && cat "$a" >> "$NR_CALLS"; prev="$a"; done
+if [ "$1 $2" = "label list" ]; then printf 'status:ready\n'; fi
 if [ "$1 $2" = "issue list" ]; then
   printf '7\tNightly: green-one\n9\tNightly: red-old\n11\tNightly: integration: s-fixed\n12\tNightly: integration: s-bad-old\n13\tNightly: integration: other failures\n'
 fi
@@ -33,6 +34,7 @@ FAKE
     NR_NEEDS="" NR_ITEMS_FILE="" NR_LOGS_DIR="" run env
   has "issue close 7" || fail "green-one was not closed"
   has "issue create --title Nightly: red-new" || fail "red-new was not created"
+  has "--label status:ready" || fail "new issue is not status:ready"
   has "issue comment 9" || fail "red-old was not commented"
   has "issue close 9" && fail "red-old closed"
   has "issue create --title Nightly: clean" && fail "clean created"
@@ -143,6 +145,9 @@ label_args=(--label nightly)
 oldifs=$IFS; IFS=,
 for l in $labels; do [ -n "$l" ] && label_args+=(--label "$l"); done
 IFS=$oldifs
+# A nightly issue is ready by definition (cdowin/signalandecho#141): add status:ready when the repo has the label.
+have=$(gh label list --search status:ready --json name --jq '.[].name' 2>/dev/null || true)
+if grep -qx 'status:ready' <<<"$have"; then label_args+=(--label status:ready); fi
 
 # One list call: open nightly issues as number<TAB>title.
 open_list="$work/open.tsv"

@@ -35,7 +35,9 @@ inputs:
     description: Cap on new per-item issues in one run.
     default: '10'
   labels:
-    description: Extra labels for a new issue, comma separated. `nightly` is always added. Do not add an agent label: any agent can take the issue.
+    description: >
+      Extra labels for a new issue, comma separated. `nightly` is always added, and `status:ready`
+      when the repo has that label. Do not add an agent label: any agent can take the issue.
     default: bug
   artifact-name:
     description: Name of the uploaded log artifact. Empty skips the upload.
