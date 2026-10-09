@@ -1,0 +1,82 @@
+name: kit-released
+# A kit release opens one "Adopt <kit> <tag>" issue in each consumer repo.
+# The caller passes the consumers. This file holds no repo names.
+on:
+  workflow_call:
+    inputs:
+      kit:
+        description: Kit repo name, for example agentic-sdlc.
+        type: string
+        required: true
+      tag:
+        description: The release tag.
+        type: string
+        required: true
+      consumers:
+        description: Consumer repos as owner/repo, separated by spaces, commas or new lines.
+        type: string
+        required: true
+      dry_run:
+        description: Print the issues. File nothing.
+        type: boolean
+        default: false
+    secrets:
+      token:
+        description: A token that can write issues in each consumer.
+        required: false
+permissions:
+  contents: read
+jobs:
+  adopt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: file the adopt issues
+        env:
+          KIT: ${{ inputs.kit }}
+          TAG: ${{ inputs.tag }}
+          CONSUMERS: ${{ inputs.consumers }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          GH_TOKEN: ${{ secrets.token }}
+        run: |
+          set -eu
+          if [ "$DRY_RUN" != "true" ] && [ -z "$GH_TOKEN" ]; then
+            echo "secret token is required unless dry_run is true" >&2
+            exit 1
+          fi
+          title="Adopt $KIT $TAG"
+          body="Kit $KIT released $TAG.
+
+          Release notes: https://github.com/cdowin/$KIT/releases/tag/$TAG
+
+          ### Steps
+          - [ ] Bump the $KIT pin to $TAG.
+          - [ ] Run the adopt step.
+          - [ ] Run the narrow gate.
+
+          ### Done when
+          - [ ] The pin reads $TAG.
+          - [ ] The adopt step ran with no error.
+          - [ ] The narrow gate passes.
+
+          ### Proof
+          The narrow gate output, linked in the PR."
+          for repo in $(printf '%s' "$CONSUMERS" | tr ',' ' '); do
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "DRY RUN: would file in $repo"
+              echo "  title: $title"
+              echo "  labels: status:ready, area:code"
+              echo "  (an open 'Adopt $KIT ' issue would be edited instead)"
+              printf '%s\n' "$body" | sed 's/^/  | /'
+              continue
+            fi
+            open=$(gh issue list -R "$repo" --state open --limit 100 --json number,title \
+              --jq "[.[] | select(.title | startswith(\"Adopt $KIT \"))][0].number // empty")
+            if [ -n "$open" ]; then
+              gh issue edit "$open" -R "$repo" --title "$title" --body "$body"
+              echo "edited $repo#$open"
+            else
+              gh issue create -R "$repo" --title "$title" --body "$body" \
+                --label status:ready --label area:code
+            fi
+          done
