@@ -17,3 +17,10 @@ jobs:
         run: |
           if grep -nE '^ +description:.*\$\{\{|^ +\$\{\{' actions/*/action.yml; then exit 1; fi
           if awk '/description: >/{d=1;next} /^    (default|required):|^  [a-z-]+:/{d=0} d&&/\$\{\{/{print FILENAME": "$0; f=1} END{exit f}' actions/*/action.yml; then :; else exit 1; fi
+  kit-released-dry-run:
+    uses: ./.github/workflows/kit-released.yml
+    with:
+      kit: example-kit
+      tag: v0.0.0
+      consumers: example/one, example/two
+      dry_run: true
