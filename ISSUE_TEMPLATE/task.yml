@@ -23,6 +23,21 @@ body:
     id: plan
     attributes:
       label: Plan
-      description: Optional. The steps, in order, as a checklist. Update it while you work.
+      description: The steps, in order, as a checklist. Required before the task is marked ready. Update it while you work.
       placeholder: |
         - [ ] 
+  - type: textarea
+    id: files
+    attributes:
+      label: Files
+      description: The files the task may touch. Required before the task is marked ready.
+  - type: textarea
+    id: proof
+    attributes:
+      label: Proof
+      description: The test or golden file that proves it, and the command that runs it. Required before the task is marked ready.
+  - type: input
+    id: tier
+    attributes:
+      label: Tier
+      description: The model tier, by oracle coverage (agentic-sdlc AGENTS-AND-MODELS.md). Required before the task is marked ready.
