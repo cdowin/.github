@@ -10,7 +10,7 @@ The process lives in `cdowin/signalandecho` (README and skill `work-intake`). Th
 
 ## studio-ci: one CI shape for every studio repo
 
-`.github/workflows/studio-ci.yml` is a reusable workflow with 3 jobs: `fast` (every PR, draft or ready, and push), `heavy` (skipped with no `heavy` command and on a draft PR) and `gate` (needs both; a skipped lane passes, a failed or cancelled one fails it). Branch protection requires the gate only. The caller owns triggers and concurrency. A repo's `ci.yml`:
+`.github/workflows/studio-ci.yml` is a reusable workflow with 3 jobs: `fast` (every PR, draft or ready, and push), `heavy` (skipped with no `heavy` command and on a draft PR) and `gate` (needs both; a skipped lane passes, a failed or cancelled one fails it, with 1 exception: on a draft PR with a `heavy` command the gate fails with "draft: heavy lane not run; mark the PR ready to run it", so auto-merge cannot land on the draft run; with no `heavy` command a draft's gate passes on fast alone). Branch protection requires the gate only. The caller owns triggers and concurrency. A repo's `ci.yml`:
 
 ```yaml
 name: ci
@@ -25,7 +25,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   ci:
-    uses: cdowin/.github/.github/workflows/studio-ci.yml@studio-ci-v1
+    uses: cdowin/.github/.github/workflows/studio-ci.yml@studio-ci-v2
     with:
       fast: ./bin/check
       # heavy: ./bin/e2e   # why it cannot be fast
@@ -33,6 +33,6 @@ jobs:
 
 Inputs: `fast` (command, required), `heavy` (command, default empty), `fast-runs-on` and `heavy-runs-on` (JSON label arrays as strings, default `'["ubuntu-latest"]'`), `setup` (command run before each lane), `timeout-fast` (10), `timeout-heavy` (60), `checkout-fetch-depth` (1).
 
-Lane rule: every check goes in `fast` by default. A check goes in `heavy` only with a 1-line comment in the caller saying why it cannot be fast. The nightly stays as it is, with `nightly-should-run` and `nightly-report`.
+Lane rule: every check goes in `fast` by default. A check goes in `heavy` only with a 1-line comment in the caller saying why it cannot be fast. A repo with a `heavy` lane sees a red gate on every draft PR by design; it goes green when the PR is marked ready. The nightly stays as it is, with `nightly-should-run` and `nightly-report`.
 
 What it is and why, for people: [wiki](https://github.com/cdowin/.github/wiki).

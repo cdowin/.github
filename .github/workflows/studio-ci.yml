@@ -1,5 +1,8 @@
 name: studio-ci
 # One CI shape for every studio repo: a draft PR runs the fast lane, a ready PR also runs the heavy lane.
+# With a heavy lane configured, a draft PR's gate FAILS (the heavy lane did not run, and a skipped lane
+# must not count as a pass: auto-merge could land on the draft run). Mark the PR ready to run it.
+# With no heavy lane, a draft's gate passes on fast alone.
 # The caller owns triggers and concurrency. Paste this as .github/workflows/ci.yml and pin the tag:
 #
 #   name: ci
@@ -14,7 +17,7 @@ name: studio-ci
 #     cancel-in-progress: true
 #   jobs:
 #     ci:
-#       uses: cdowin/.github/.github/workflows/studio-ci.yml@studio-ci-v1
+#       uses: cdowin/.github/.github/workflows/studio-ci.yml@studio-ci-v2
 #       with:
 #         fast: ./bin/check
 #         # heavy: ./bin/e2e   # needs a 1-line comment here saying why it cannot be fast
@@ -28,7 +31,7 @@ on:
         type: string
         required: true
       heavy:
-        description: Command for the heavy lane. Empty skips the lane. It skips on a draft PR.
+        description: Command for the heavy lane. Empty skips the lane. It skips on a draft PR, and the gate fails there until the PR is ready.
         type: string
         default: ''
       fast-runs-on:
@@ -75,7 +78,7 @@ jobs:
           CMD: ${{ inputs.fast }}
         run: bash -c "$CMD"
   heavy:
-    # Skipped with no heavy command, and on a draft PR. A push or dispatch runs it.
+    # Skipped with no heavy command, and on a draft PR (the gate fails that case). A push or dispatch runs it.
     if: inputs.heavy != '' && github.event.pull_request.draft != true
     runs-on: ${{ fromJSON(inputs.heavy-runs-on) }}
     timeout-minutes: ${{ inputs.timeout-heavy }}
@@ -93,6 +96,7 @@ jobs:
           CMD: ${{ inputs.heavy }}
         run: bash -c "$CMD"
   # The 1 required check. A skipped lane passes; a failed or cancelled lane fails the gate.
+  # Exception: a draft PR with a heavy lane configured fails, so auto-merge cannot land on a draft run.
   gate:
     needs: [fast, heavy]
     if: always()
@@ -102,6 +106,14 @@ jobs:
       - name: every lane passed or was skipped
         env:
           NEEDS: ${{ toJSON(needs) }}
+          EVENT: ${{ github.event_name }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+          HEAVY: ${{ inputs.heavy }}
         run: |
           echo "$NEEDS"
+          draft_blocks() { [ "$1" = pull_request ] && [ "$2" = true ] && [ -n "$3" ]; }
+          if draft_blocks "$EVENT" "$DRAFT" "$HEAVY"; then
+            echo "::error::draft: heavy lane not run; mark the PR ready to run it"
+            exit 1
+          fi
           if echo "$NEEDS" | grep -Eq '"result": *"(failure|cancelled)"'; then exit 1; fi
