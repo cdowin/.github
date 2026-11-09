@@ -24,3 +24,9 @@ jobs:
       tag: v0.0.0
       consumers: example/one, example/two
       dry_run: true
+  studio-ci-pass:
+    uses: ./.github/workflows/studio-ci.yml
+    with:
+      fast: 'true'
+      heavy: 'true'
+      setup: 'true'
