@@ -24,9 +24,33 @@ jobs:
       tag: v0.0.0
       consumers: example/one, example/two
       dry_run: true
+  # Pass paths. The heavy case needs a non-draft PR: a draft with a heavy lane fails by design.
   studio-ci-pass:
+    uses: ./.github/workflows/studio-ci.yml
+    with:
+      fast: 'true'
+      setup: 'true'
+  studio-ci-pass-heavy:
+    if: github.event.pull_request.draft != true
     uses: ./.github/workflows/studio-ci.yml
     with:
       fast: 'true'
       heavy: 'true'
       setup: 'true'
+  # A reusable workflow cannot be called with continue-on-error, so test the gate's decision on fixed inputs.
+  studio-ci-draft-decision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          eval "$(grep -m1 '^ *draft_blocks()' .github/workflows/studio-ci.yml)"
+          t() { if draft_blocks "$1" "$2" "$3"; then got=fail; else got=pass; fi
+            [ "$got" = "$4" ] || { echo "draft_blocks '$1' '$2' '$3': want $4, got $got"; exit 1; }; }
+          t pull_request true 'x' fail
+          t pull_request true '' pass
+          t pull_request false 'x' pass
+          t pull_request '' 'x' pass
+          t push '' 'x' pass
+          t push true 'x' pass
+          t workflow_dispatch '' 'x' pass
