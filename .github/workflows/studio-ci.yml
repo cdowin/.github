@@ -1,0 +1,107 @@
+name: studio-ci
+# One CI shape for every studio repo: a draft PR runs the fast lane, a ready PR also runs the heavy lane.
+# The caller owns triggers and concurrency. Paste this as .github/workflows/ci.yml and pin the tag:
+#
+#   name: ci
+#   on:
+#     pull_request:
+#       types: [opened, synchronize, reopened, ready_for_review]
+#     push:
+#       branches: [main]
+#     workflow_dispatch:
+#   concurrency:
+#     group: ci-${{ github.ref }}
+#     cancel-in-progress: true
+#   jobs:
+#     ci:
+#       uses: cdowin/.github/.github/workflows/studio-ci.yml@studio-ci-v1
+#       with:
+#         fast: ./bin/check
+#         # heavy: ./bin/e2e   # needs a 1-line comment here saying why it cannot be fast
+#
+# Branch protection requires 1 check: the gate, named "ci / gate" in the example above.
+on:
+  workflow_call:
+    inputs:
+      fast:
+        description: Command for the fast lane. It runs on every PR, draft or ready.
+        type: string
+        required: true
+      heavy:
+        description: Command for the heavy lane. Empty skips the lane. It skips on a draft PR.
+        type: string
+        default: ''
+      fast-runs-on:
+        description: JSON array of runner labels for the fast lane.
+        type: string
+        default: '["ubuntu-latest"]'
+      heavy-runs-on:
+        description: JSON array of runner labels for the heavy lane.
+        type: string
+        default: '["ubuntu-latest"]'
+      setup:
+        description: Optional command run before the lane command, in each lane.
+        type: string
+        default: ''
+      timeout-fast:
+        description: Minutes before the fast lane is stopped.
+        type: number
+        default: 10
+      timeout-heavy:
+        description: Minutes before the heavy lane is stopped.
+        type: number
+        default: 60
+      checkout-fetch-depth:
+        description: Depth for the checkout. 0 fetches all history.
+        type: number
+        default: 1
+permissions:
+  contents: read
+jobs:
+  fast:
+    runs-on: ${{ fromJSON(inputs.fast-runs-on) }}
+    timeout-minutes: ${{ inputs.timeout-fast }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: ${{ inputs.checkout-fetch-depth }}
+      - name: setup
+        if: inputs.setup != ''
+        env:
+          CMD: ${{ inputs.setup }}
+        run: bash -c "$CMD"
+      - name: fast
+        env:
+          CMD: ${{ inputs.fast }}
+        run: bash -c "$CMD"
+  heavy:
+    # Skipped with no heavy command, and on a draft PR. A push or dispatch runs it.
+    if: inputs.heavy != '' && github.event.pull_request.draft != true
+    runs-on: ${{ fromJSON(inputs.heavy-runs-on) }}
+    timeout-minutes: ${{ inputs.timeout-heavy }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: ${{ inputs.checkout-fetch-depth }}
+      - name: setup
+        if: inputs.setup != ''
+        env:
+          CMD: ${{ inputs.setup }}
+        run: bash -c "$CMD"
+      - name: heavy
+        env:
+          CMD: ${{ inputs.heavy }}
+        run: bash -c "$CMD"
+  # The 1 required check. A skipped lane passes; a failed or cancelled lane fails the gate.
+  gate:
+    needs: [fast, heavy]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: every lane passed or was skipped
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS"
+          if echo "$NEEDS" | grep -Eq '"result": *"(failure|cancelled)"'; then exit 1; fi
